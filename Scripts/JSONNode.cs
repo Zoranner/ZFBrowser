@@ -121,8 +121,7 @@ namespace ZenFulcrum.EmbeddedBrowser
             {
                 if (_type == NodeType.Object)
                 {
-                    JSONNode ret;
-                    if (_objectValue.TryGetValue(k, out ret))
+                    if (_objectValue.TryGetValue(k, out var ret))
                     {
                         return ret;
                     }
@@ -281,7 +280,7 @@ namespace ZenFulcrum.EmbeddedBrowser
 
         public static implicit operator int(JSONNode n)
         {
-            return n._type == NodeType.Number ? (int) n._numberValue : 0;
+            return n._type == NodeType.Number ? (int)n._numberValue : 0;
         }
 
         public static implicit operator JSONNode(int v)
@@ -291,7 +290,7 @@ namespace ZenFulcrum.EmbeddedBrowser
 
         public static implicit operator float(JSONNode n)
         {
-            return n._type == NodeType.Number ? (float) n._numberValue : 0;
+            return n._type == NodeType.Number ? (float)n._numberValue : 0;
         }
 
         public static implicit operator JSONNode(float v)

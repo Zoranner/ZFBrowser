@@ -2,246 +2,322 @@
 #define ZF_OSX
 #endif
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ZenFulcrum.EmbeddedBrowser {
+namespace ZenFulcrum.EmbeddedBrowser
+{
 
-/// <summary>
-/// Helper/worker class for displaying an external keyboard and
-/// sending the input to a browser.
-/// 
-/// Don't put this script on your target browser directly, add a separate browser 
-/// to the scene and attach it to that instead.
-/// 
-/// </summary>
-[RequireComponent(typeof(Browser))]
-[RequireComponent(typeof(PointerUIBase))]
-public class ExternalKeyboard : MonoBehaviour {
+    /// <summary>
+    /// Helper/worker class for displaying an external keyboard and
+    /// sending the input to a browser.
+    /// 
+    /// Don't put this script on your target browser directly, add a separate browser 
+    /// to the scene and attach it to that instead.
+    /// 
+    /// </summary>
+    [RequireComponent(typeof(Browser))]
+    [RequireComponent(typeof(PointerUIBase))]
+    public class ExternalKeyboard : MonoBehaviour
+    {
 
-	[Tooltip("Set to true before startup to have the keyboard automatically hook to the browser with the most recently focused text field.")]
-	public bool automaticFocus;
+        [Tooltip("Set to true before startup to have the keyboard automatically hook to the browser with the most recently focused text field.")]
+        public bool automaticFocus;
 
-	[Tooltip("Browser to start as the focused browser for this keyboard. Not really needed if automaticFocus is on.")]
-	public Browser initialBrowser;
+        [Tooltip("Browser to start as the focused browser for this keyboard. Not really needed if automaticFocus is on.")]
+        public Browser initialBrowser;
 
-	[Tooltip(@"Set to true to have the keyboard automatically hide when we don't have a text entry box to type into.")]
-	public bool hideWhenUnneeded = true;
+        [Tooltip(@"Set to true to have the keyboard automatically hide when we don't have a text entry box to type into.")]
+        public bool hideWhenUnneeded = true;
 
-	protected PointerUIBase activeBrowserUI;
-	protected Browser keyboardBrowser;
-	protected bool forcingFocus;
+        protected PointerUIBase activeBrowserUI;
+        protected Browser keyboardBrowser;
+        protected bool forcingFocus;
 
-	protected Browser _activeBrowser;
-	/// <summary>
-	/// Browser that gets input if we press keys on the keyboard.
-	/// </summary>
-	protected virtual Browser ActiveBrowser {
-		get { return _activeBrowser; }
-		set {
-			_SetActiveBrowser(value);
-			DoFocus(_activeBrowser);
-		}
-	}
+        protected Browser _activeBrowser;
+        /// <summary>
+        /// Browser that gets input if we press keys on the keyboard.
+        /// </summary>
+        protected virtual Browser ActiveBrowser
+        {
+            get => _activeBrowser;
+            set
+            {
+                _SetActiveBrowser(value);
+                DoFocus(_activeBrowser);
+            }
+        }
 
-	protected void _SetActiveBrowser(Browser browser) {
-		if (ActiveBrowser) {
-			if (activeBrowserUI && forcingFocus) {
-				activeBrowserUI.ForceKeyboardHasFocus(false);
-				forcingFocus = false;
-			}
-		}
+        protected void _SetActiveBrowser(Browser browser)
+        {
+            if (ActiveBrowser)
+            {
+                if (activeBrowserUI && forcingFocus)
+                {
+                    activeBrowserUI.ForceKeyboardHasFocus(false);
+                    forcingFocus = false;
+                }
+            }
 
-		_activeBrowser = browser;
-		activeBrowserUI = ActiveBrowser.GetComponent<PointerUIBase>();
-		if (!activeBrowserUI) {
-			//We can't focus the browser when we type, so the typed letters won't appear as we type.
-			Debug.LogWarning("Browser does not have a PointerUI, external keyboard may not work properly.");
-		}
-	}
+            _activeBrowser = browser;
+            activeBrowserUI = ActiveBrowser.GetComponent<PointerUIBase>();
+            if (!activeBrowserUI)
+            {
+                //We can't focus the browser when we type, so the typed letters won't appear as we type.
+                Debug.LogWarning("Browser does not have a PointerUI, external keyboard may not work properly.");
+            }
+        }
 
-	/// <summary>
-	/// Called when the focus of the keyboard changes.
-	/// The browser is the browser we are focused on (may or may not be different), editable will be true if we
-	/// are expected to type in the new focus, false if not.
-	/// </summary>
-	public event Action<Browser, bool> onFocusChange = (browser, editable) => {};
-	
-	public void Awake() {
-		var keyboardPage = Resources.Load<TextAsset>("Browser/Keyboard").text;
+        /// <summary>
+        /// Called when the focus of the keyboard changes.
+        /// The browser is the browser we are focused on (may or may not be different), editable will be true if we
+        /// are expected to type in the new focus, false if not.
+        /// </summary>
+        public event Action<Browser, bool> onFocusChange = (browser, editable) => { };
 
-		keyboardBrowser = GetComponent<Browser>();
+        public void Awake()
+        {
+            var keyboardPage = Resources.Load<TextAsset>("Browser/Keyboard").text;
 
-		keyboardBrowser.onBrowserFocus += OnKeyboardFocus;
-		keyboardBrowser.LoadHTML(keyboardPage);
-		keyboardBrowser.RegisterFunction("textTyped", TextTyped);
-		keyboardBrowser.RegisterFunction("commandEntered", CommandEntered);
+            keyboardBrowser = GetComponent<Browser>();
 
-		if (initialBrowser) ActiveBrowser = initialBrowser;
+            keyboardBrowser.onBrowserFocus += OnKeyboardFocus;
+            keyboardBrowser.LoadHTML(keyboardPage);
+            keyboardBrowser.RegisterFunction("textTyped", TextTyped);
+            keyboardBrowser.RegisterFunction("commandEntered", CommandEntered);
 
-		if (automaticFocus) { 
-			foreach (var browser in FindObjectsOfType<Browser>()) {
-				ObserveBrowser(browser);
-			}
-			Browser.onAnyBrowserCreated += ObserveBrowser;
-		}
+            if (initialBrowser)
+            {
+                ActiveBrowser = initialBrowser;
+            }
 
-		if (hideWhenUnneeded) SetVisible(false);
-	}
+            if (automaticFocus)
+            {
+                foreach (var browser in FindObjectsOfType<Browser>())
+                {
+                    ObserveBrowser(browser);
+                }
+                Browser.onAnyBrowserCreated += ObserveBrowser;
+            }
 
-	public void OnDisable() {
-		Browser.onAnyBrowserCreated -= ObserveBrowser;
-	}
+            if (hideWhenUnneeded)
+            {
+                SetVisible(false);
+            }
+        }
 
-	protected void ObserveBrowser(Browser browser) {
-		if (browser == keyboardBrowser) return;//don't want to know about ourself
+        public void OnDisable()
+        {
+            Browser.onAnyBrowserCreated -= ObserveBrowser;
+        }
 
-		browser.onNodeFocus += (tagName, editable, value) => {
-			if (!this) return;
-			if (browser != ActiveBrowser && !browser.focusState.hasMouseFocus) {
-				return;
-			}
+        protected void ObserveBrowser(Browser browser)
+        {
+            if (browser == keyboardBrowser)
+            {
+                return;//don't want to know about ourself
+            }
 
-			DoFocus(browser);
-		};
+            browser.onNodeFocus += (tagName, editable, value) =>
+            {
+                if (!this)
+                {
+                    return;
+                }
 
-		var pointerUI = browser.GetComponent<PointerUIBase>();
-		if (pointerUI) {
-			pointerUI.onClick += () => {
-				DoFocus(browser);
-			};
-		}
-	}
+                if (browser != ActiveBrowser && !browser.focusState.hasMouseFocus)
+                {
+                    return;
+                }
 
-	protected void DoFocus(Browser browser) {
-		if (browser != ActiveBrowser) {
-			_SetActiveBrowser(browser);
-		}
+                DoFocus(browser);
+            };
 
-		bool visible;
-		if (browser) visible = browser.focusState.focusedNodeEditable;
-		else visible = false;
+            var pointerUI = browser.GetComponent<PointerUIBase>();
+            if (pointerUI)
+            {
+                pointerUI.onClick += () =>
+                {
+                    DoFocus(browser);
+                };
+            }
+        }
 
-		if (hideWhenUnneeded) SetVisible(visible);
-		
-		onFocusChange(_activeBrowser, visible);
-	}
+        protected void DoFocus(Browser browser)
+        {
+            if (browser != ActiveBrowser)
+            {
+                _SetActiveBrowser(browser);
+            }
 
-	protected void SetVisible(bool visible) {
-		var renderer = GetComponent<Renderer>();
-		if (renderer) renderer.enabled = visible;
-		var collider = GetComponent<Collider>();
-		if (collider) collider.enabled = visible;
+            bool visible;
+            if (browser)
+            {
+                visible = browser.focusState.focusedNodeEditable;
+            }
+            else
+            {
+                visible = false;
+            }
 
-		var image = GetComponent<RawImage>();
-		if (image) image.enabled = visible;
-		var keyboardInput = GetComponent<PointerUIGUI>();
-		if (keyboardInput) keyboardInput.enableInput = visible;
-	}
+            if (hideWhenUnneeded)
+            {
+                SetVisible(visible);
+            }
 
-	protected void OnKeyboardFocus(bool mouseFocused, bool kbFocused) {
-		//when our keyboard is focused, focus the browser we will be typing into.
-		if (!activeBrowserUI) return;
+            onFocusChange(_activeBrowser, visible);
+        }
 
-		if ((mouseFocused || kbFocused) && !forcingFocus) {
-			activeBrowserUI.ForceKeyboardHasFocus(true);
-			forcingFocus = true;
-		}
+        protected void SetVisible(bool visible)
+        {
+            var renderer = GetComponent<Renderer>();
+            if (renderer)
+            {
+                renderer.enabled = visible;
+            }
 
-		if (!(mouseFocused || kbFocused) && forcingFocus) {
-			activeBrowserUI.ForceKeyboardHasFocus(false);
-			forcingFocus = false;
-		}
-	}
+            var collider = GetComponent<Collider>();
+            if (collider)
+            {
+                collider.enabled = visible;
+            }
 
-	protected void CommandEntered(JSONNode args) {
-		if (!ActiveBrowser) return;
+            var image = GetComponent<RawImage>();
+            if (image)
+            {
+                image.enabled = visible;
+            }
 
-		string command = args[0];
-		bool shiftPressed = args[1];
+            var keyboardInput = GetComponent<PointerUIGUI>();
+            if (keyboardInput)
+            {
+                keyboardInput.enableInput = visible;
+            }
+        }
 
-		if (shiftPressed) ActiveBrowser.PressKey(KeyCode.LeftShift, KeyAction.Press);
+        protected void OnKeyboardFocus(bool mouseFocused, bool kbFocused)
+        {
+            //when our keyboard is focused, focus the browser we will be typing into.
+            if (!activeBrowserUI)
+            {
+                return;
+            }
 
-		
+            if ((mouseFocused || kbFocused) && !forcingFocus)
+            {
+                activeBrowserUI.ForceKeyboardHasFocus(true);
+                forcingFocus = true;
+            }
+
+            if (!(mouseFocused || kbFocused) && forcingFocus)
+            {
+                activeBrowserUI.ForceKeyboardHasFocus(false);
+                forcingFocus = false;
+            }
+        }
+
+        protected void CommandEntered(JSONNode args)
+        {
+            if (!ActiveBrowser)
+            {
+                return;
+            }
+
+            string command = args[0];
+            bool shiftPressed = args[1];
+
+            if (shiftPressed)
+            {
+                ActiveBrowser.PressKey(KeyCode.LeftShift, KeyAction.Press);
+            }
+
+
 #if ZF_OSX
 		const KeyCode wordShifter = KeyCode.LeftAlt;
 #else
-		const KeyCode wordShifter = KeyCode.LeftControl;
+            const KeyCode wordShifter = KeyCode.LeftControl;
 #endif
 
-		switch (command) {
-			case "backspace":
-				ActiveBrowser.PressKey(KeyCode.Backspace);
-				break;
-			case "copy":
-				ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Copy);
-				break;
-			case "cut":
-				ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Cut);
-				break;
-			case "delete":
-				ActiveBrowser.PressKey(KeyCode.Delete);
-				break;
-			case "down":
-				ActiveBrowser.PressKey(KeyCode.DownArrow);
-				break;
-			case "end":
-				ActiveBrowser.PressKey(KeyCode.End);
-				break;
-			case "home":
-				ActiveBrowser.PressKey(KeyCode.Home);
-				break;
-			case "insert":
-				ActiveBrowser.PressKey(KeyCode.Insert);
-				break;
-			case "left":
-				ActiveBrowser.PressKey(KeyCode.LeftArrow);
-				break;
-			case "pageDown":
-				ActiveBrowser.PressKey(KeyCode.PageDown);
-				break;
-			case "pageUp":
-				ActiveBrowser.PressKey(KeyCode.PageUp);
-				break;
-			case "paste":
-				ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Paste);
-				break;
-			case "redo":
-				ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Redo);
-				break;
-			case "right":
-				ActiveBrowser.PressKey(KeyCode.RightArrow);
-				break;
-			case "selectAll":
-				ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.SelectAll);
-				break;
-			case "undo":
-				ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Undo);
-				break;
-			case "up":
-				ActiveBrowser.PressKey(KeyCode.UpArrow);
-				break;
-			case "wordLeft":
-				ActiveBrowser.PressKey(wordShifter, KeyAction.Press);
-				ActiveBrowser.PressKey(KeyCode.LeftArrow);
-				ActiveBrowser.PressKey(wordShifter, KeyAction.Release);
-				break;
-			case "wordRight":
-				ActiveBrowser.PressKey(wordShifter, KeyAction.Press);
-				ActiveBrowser.PressKey(KeyCode.RightArrow);
-				ActiveBrowser.PressKey(wordShifter, KeyAction.Release);
-				break;
-		}
+            switch (command)
+            {
+                case "backspace":
+                    ActiveBrowser.PressKey(KeyCode.Backspace);
+                    break;
+                case "copy":
+                    ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Copy);
+                    break;
+                case "cut":
+                    ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Cut);
+                    break;
+                case "delete":
+                    ActiveBrowser.PressKey(KeyCode.Delete);
+                    break;
+                case "down":
+                    ActiveBrowser.PressKey(KeyCode.DownArrow);
+                    break;
+                case "end":
+                    ActiveBrowser.PressKey(KeyCode.End);
+                    break;
+                case "home":
+                    ActiveBrowser.PressKey(KeyCode.Home);
+                    break;
+                case "insert":
+                    ActiveBrowser.PressKey(KeyCode.Insert);
+                    break;
+                case "left":
+                    ActiveBrowser.PressKey(KeyCode.LeftArrow);
+                    break;
+                case "pageDown":
+                    ActiveBrowser.PressKey(KeyCode.PageDown);
+                    break;
+                case "pageUp":
+                    ActiveBrowser.PressKey(KeyCode.PageUp);
+                    break;
+                case "paste":
+                    ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Paste);
+                    break;
+                case "redo":
+                    ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Redo);
+                    break;
+                case "right":
+                    ActiveBrowser.PressKey(KeyCode.RightArrow);
+                    break;
+                case "selectAll":
+                    ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.SelectAll);
+                    break;
+                case "undo":
+                    ActiveBrowser.SendFrameCommand(BrowserNative.FrameCommand.Undo);
+                    break;
+                case "up":
+                    ActiveBrowser.PressKey(KeyCode.UpArrow);
+                    break;
+                case "wordLeft":
+                    ActiveBrowser.PressKey(wordShifter, KeyAction.Press);
+                    ActiveBrowser.PressKey(KeyCode.LeftArrow);
+                    ActiveBrowser.PressKey(wordShifter, KeyAction.Release);
+                    break;
+                case "wordRight":
+                    ActiveBrowser.PressKey(wordShifter, KeyAction.Press);
+                    ActiveBrowser.PressKey(KeyCode.RightArrow);
+                    ActiveBrowser.PressKey(wordShifter, KeyAction.Release);
+                    break;
+            }
 
-		if (shiftPressed) ActiveBrowser.PressKey(KeyCode.LeftShift, KeyAction.Release);
-	}
+            if (shiftPressed)
+            {
+                ActiveBrowser.PressKey(KeyCode.LeftShift, KeyAction.Release);
+            }
+        }
 
-	protected void TextTyped(JSONNode args) {
-		if (!ActiveBrowser) return;
+        protected void TextTyped(JSONNode args)
+        {
+            if (!ActiveBrowser)
+            {
+                return;
+            }
 
-		ActiveBrowser.TypeText(args[0]);
-	}
-}
+            ActiveBrowser.TypeText(args[0]);
+        }
+    }
 
 }

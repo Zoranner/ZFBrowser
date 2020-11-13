@@ -1,135 +1,175 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace ZenFulcrum.EmbeddedBrowser {
-
-/** Attach this script to a GUI Image to use a browser on it. */
-[RequireComponent(typeof(RawImage))]
-public class PointerUIGUI :
-	PointerUIBase,
-	IBrowserUI,
-	ISelectHandler, IDeselectHandler,
-	IPointerEnterHandler, IPointerExitHandler,
-	IPointerDownHandler
+namespace ZenFulcrum.EmbeddedBrowser
 {
-	protected RawImage myImage;
 
-	public bool enableInput = true;
-	public bool automaticResize = true;
+    /** Attach this script to a GUI Image to use a browser on it. */
+    [RequireComponent(typeof(RawImage))]
+    public class PointerUIGUI :
+    PointerUIBase,
+    IBrowserUI,
+    ISelectHandler, IDeselectHandler,
+    IPointerEnterHandler, IPointerExitHandler,
+    IPointerDownHandler
+    {
+        protected RawImage myImage;
 
-	public override void Awake() {
-		base.Awake();
-		myImage = GetComponent<RawImage>();
+        public bool enableInput = true;
+        public bool automaticResize = true;
 
-		browser.afterResize += UpdateTexture;
-//		BrowserCursor.cursorChange += () => {
-//			SetCursor(BrowserCursor);
-//		};
+        public override void Awake()
+        {
+            base.Awake();
+            myImage = GetComponent<RawImage>();
 
-		rTransform = GetComponent<RectTransform>();
-	}
+            browser.afterResize += UpdateTexture;
+            //		BrowserCursor.cursorChange += () => {
+            //			SetCursor(BrowserCursor);
+            //		};
 
-	protected void OnEnable() {
-		if (automaticResize) StartCoroutine(WatchResize());
-	}
+            rTransform = GetComponent<RectTransform>();
+        }
 
-	/** Automatically resizes the browser to match the size of this object. */
-	private IEnumerator WatchResize() {
-		Rect currentSize = new Rect();
+        protected void OnEnable()
+        {
+            if (automaticResize)
+            {
+                StartCoroutine(WatchResize());
+            }
+        }
 
-		while (enabled) {
-			var rect = rTransform.rect;
+        /** Automatically resizes the browser to match the size of this object. */
+        private IEnumerator WatchResize()
+        {
+            var currentSize = new Rect();
 
-			if (rect.size.x <= 0 || rect.size.y <= 0) rect.size = new Vector2(512, 512);
-			if (rect.size != currentSize.size) {
-				browser.Resize((int)rect.size.x, (int)rect.size.y);
-				currentSize = rect;
-			}
+            while (enabled)
+            {
+                var rect = rTransform.rect;
 
-			yield return null;
-		}
-	}
+                if (rect.size.x <= 0 || rect.size.y <= 0)
+                {
+                    rect.size = new Vector2(512, 512);
+                }
 
-	protected void UpdateTexture(Texture2D texture) {
-		myImage.texture = texture;
-		myImage.uvRect = new Rect(0, 0, 1, 1);
-	}
+                if (rect.size != currentSize.size)
+                {
+                    browser.Resize((int)rect.size.x, (int)rect.size.y);
+                    currentSize = rect;
+                }
 
-	protected BaseRaycaster raycaster;
-	protected RectTransform rTransform;
-//	protected List<RaycastResult> raycastResults = new List<RaycastResult>();
+                yield return null;
+            }
+        }
 
-	protected override Vector2 MapPointerToBrowser(Vector2 screenPosition, int pointerId) {
-		if (!raycaster) raycaster = GetComponentInParent<BaseRaycaster>();
+        protected void UpdateTexture(Texture2D texture)
+        {
+            myImage.texture = texture;
+            myImage.uvRect = new Rect(0, 0, 1, 1);
+        }
 
-		Vector2 pos;
-		RectTransformUtility.ScreenPointToLocalPointInRectangle(
-			(RectTransform)transform, screenPosition, raycaster.eventCamera, out pos
-		);
-		pos.x = pos.x / rTransform.rect.width + rTransform.pivot.x;
-		pos.y = pos.y / rTransform.rect.height + rTransform.pivot.y;
+        protected BaseRaycaster raycaster;
+        protected RectTransform rTransform;
+        //	protected List<RaycastResult> raycastResults = new List<RaycastResult>();
 
-		if (pos.x < 0 || pos.x > 1) pos.x = float.NaN;
-		if (pos.y < 0 || pos.y > 1) pos.x = float.NaN;
-		return pos;
-	}
+        protected override Vector2 MapPointerToBrowser(Vector2 screenPosition, int pointerId)
+        {
+            if (!raycaster)
+            {
+                raycaster = GetComponentInParent<BaseRaycaster>();
+            }
 
-	protected override Vector2 MapRayToBrowser(Ray worldRay, int pointerId) {
-		var evs = EventSystem.current;
-		if (!evs) return new Vector2(float.NaN, float.NaN);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                (RectTransform)transform, screenPosition, raycaster.eventCamera, out var pos
+            );
+            pos.x = pos.x / rTransform.rect.width + rTransform.pivot.x;
+            pos.y = pos.y / rTransform.rect.height + rTransform.pivot.y;
 
-		//todo: world-space GUI
-		return new Vector2(float.NaN, float.NaN);
-	}
+            if (pos.x < 0 || pos.x > 1)
+            {
+                pos.x = float.NaN;
+            }
 
-	public override void GetCurrentHitLocation(out Vector3 pos, out Quaternion rot) {
-		//todo: world space GUI
-		pos = new Vector3(float.NaN, float.NaN, float.NaN);
-		rot = Quaternion.identity;
-	}
+            if (pos.y < 0 || pos.y > 1)
+            {
+                pos.x = float.NaN;
+            }
 
+            return pos;
+        }
 
-	protected bool _mouseHasFocus;
-	public override bool MouseHasFocus {
-		get { return _mouseHasFocus && enableInput; } 
-		protected set { _mouseHasFocus = value; }
-	}
-	protected bool _keyboardHasFocus;
+        protected override Vector2 MapRayToBrowser(Ray worldRay, int pointerId)
+        {
+            var evs = EventSystem.current;
+            if (!evs)
+            {
+                return new Vector2(float.NaN, float.NaN);
+            }
 
-	public override bool KeyboardHasFocus {
-		get {
-			if (!enableInput) return false;
-			return _keyboardHasFocus || focusForceCount > 0;
-		}
-	}
+            //todo: world-space GUI
+            return new Vector2(float.NaN, float.NaN);
+        }
 
-	public void OnSelect(BaseEventData eventData) {
-		_keyboardHasFocus = true;
-		Input.imeCompositionMode = IMECompositionMode.Off;//CEF will handle the IME
-	}
-
-	public void OnDeselect(BaseEventData eventData) {
-		_keyboardHasFocus = false;
-		Input.imeCompositionMode = IMECompositionMode.Auto;
-	}
-
-	public void OnPointerEnter(PointerEventData eventData) {
-		_mouseHasFocus = true;
-//		SetCursor(BrowserCursor);
-	}
-
-	public void OnPointerExit(PointerEventData eventData) {
-		_mouseHasFocus = false;
-//		SetCursor(null);
-	}
+        public override void GetCurrentHitLocation(out Vector3 pos, out Quaternion rot)
+        {
+            //todo: world space GUI
+            pos = new Vector3(float.NaN, float.NaN, float.NaN);
+            rot = Quaternion.identity;
+        }
 
 
-	public void OnPointerDown(PointerEventData eventData) {
-		EventSystem.current.SetSelectedGameObject(gameObject);
-	}
-}
+        protected bool _mouseHasFocus;
+        public override bool MouseHasFocus {
+        get => _mouseHasFocus && enableInput;
+        protected set => _mouseHasFocus = value;
+    }
+        protected bool _keyboardHasFocus;
+
+        public override bool KeyboardHasFocus
+        {
+            get
+            {
+                if (!enableInput)
+                {
+                    return false;
+                }
+
+                return _keyboardHasFocus || focusForceCount > 0;
+            }
+        }
+
+        public void OnSelect(BaseEventData eventData)
+        {
+            _keyboardHasFocus = true;
+            Input.imeCompositionMode = IMECompositionMode.Off;//CEF will handle the IME
+        }
+
+        public void OnDeselect(BaseEventData eventData)
+        {
+            _keyboardHasFocus = false;
+            Input.imeCompositionMode = IMECompositionMode.Auto;
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            _mouseHasFocus = true;
+            //		SetCursor(BrowserCursor);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            _mouseHasFocus = false;
+            //		SetCursor(null);
+        }
+
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            EventSystem.current.SetSelectedGameObject(gameObject);
+        }
+    }
 
 }

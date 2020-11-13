@@ -33,9 +33,9 @@ namespace ZenFulcrum.EmbeddedBrowser.Promises
 
         public static void Each<T>(this IEnumerable<T> source, Action<T, int> fn)
         {
-            int index = 0;
+            var index = 0;
 
-            foreach (T item in source)
+            foreach (var item in source)
             {
                 fn.Invoke(item, index);
                 index++;

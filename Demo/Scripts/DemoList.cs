@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ZenFulcrum.EmbeddedBrowser {
-[RequireComponent(typeof(Browser))]
-public class DemoList : MonoBehaviour {
-	protected List<string> demoSites = new List<string> {
-		"localGame://demo/MouseShow.html",//simple, cheap circle follows mouse, fade
+namespace ZenFulcrum.EmbeddedBrowser
+{
+    [RequireComponent(typeof(Browser))]
+    public class DemoList : MonoBehaviour
+    {
+        protected List<string> demoSites = new List<string> {
+        "localGame://demo/MouseShow.html",//simple, cheap circle follows mouse, fade
 		"http://js1k.com/2013-spring/demo/1487",//kalidescope effect around mouse
 
 //		"http://js1k.com/2013-spring/demo/1471",//black balls follow mouse
@@ -27,34 +29,41 @@ public class DemoList : MonoBehaviour {
 //		"http://js1k.com/2013-spring/demo/1511",//circles around the mouse cursor
 	};
 
-	public Browser demoBrowser;
-	private Browser panelBrowser;
+        public Browser demoBrowser;
+        private Browser panelBrowser;
 
-	private int currentIndex = 0;
+        private int currentIndex = 0;
 
-	protected void Start() {
-		panelBrowser = GetComponent<Browser>();
-		panelBrowser.RegisterFunction("go", args => {
-			DemoNav(args[0].Check());
-		});
+        protected void Start()
+        {
+            panelBrowser = GetComponent<Browser>();
+            panelBrowser.RegisterFunction("go", args =>
+            {
+                DemoNav(args[0].Check());
+            });
 
-		demoBrowser.onLoad += info => {
-			panelBrowser.CallFunction("setDisplayedUrl", demoBrowser.Url);
-		};
+            demoBrowser.onLoad += info =>
+            {
+                panelBrowser.CallFunction("setDisplayedUrl", demoBrowser.Url);
+            };
 
-		demoBrowser.Url = demoSites[0];
-	}
+            demoBrowser.Url = demoSites[0];
+        }
 
-	private void DemoNav(int dir) {
-		if (dir > 0) {
-			currentIndex = (currentIndex + 1) % demoSites.Count;
-		} else {
-			currentIndex = (currentIndex - 1 + demoSites.Count) % demoSites.Count;
-		}
+        private void DemoNav(int dir)
+        {
+            if (dir > 0)
+            {
+                currentIndex = (currentIndex + 1) % demoSites.Count;
+            }
+            else
+            {
+                currentIndex = (currentIndex - 1 + demoSites.Count) % demoSites.Count;
+            }
 
-		demoBrowser.Url = demoSites[currentIndex];
-	}
-}
+            demoBrowser.Url = demoSites[currentIndex];
+        }
+    }
 }
 
 

@@ -2,67 +2,89 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-namespace ZenFulcrum.EmbeddedBrowser {
-/** Says something(s) in the HUD when the user touches our collider (one-shot). */
-public class SayWordsOnTouch : MonoBehaviour {
+namespace ZenFulcrum.EmbeddedBrowser
+{
+    /** Says something(s) in the HUD when the user touches our collider (one-shot). */
+    public class SayWordsOnTouch : MonoBehaviour
+    {
 
-	public static int ActiveSpeakers { get; private set; }
+        public static int ActiveSpeakers { get; private set; }
 
-	[Serializable]
-	public class Verse {
-		/** How long since the touch/last saying should we wait? */
-		public float delay;
-		/** What should we say? Full HTML support (so mind the security implications). */
-		[Multiline]
-		public string textHTML;
+        [Serializable]
+        public class Verse
+        {
+            /** How long since the touch/last saying should we wait? */
+            public float delay;
+            /** What should we say? Full HTML support (so mind the security implications). */
+            [Multiline]
+            public string textHTML;
 
-		public float dwellTime = 5;
-	}
+            public float dwellTime = 5;
+        }
 
-	public Verse[] thingsToSay;
-	private bool triggered, stillTriggered;
-	/** Make our box collider this much bigger when we enter so it's harder to leave. */
-	public float extraLeaveRange = 0;
+        public Verse[] thingsToSay;
+        private bool triggered, stillTriggered;
+        /** Make our box collider this much bigger when we enter so it's harder to leave. */
+        public float extraLeaveRange = 0;
 
-	public void OnTriggerEnter(Collider other) {
-		if (triggered) return;
-		var inventory = other.GetComponent<PlayerInventory>();
-		if (!inventory) return;
+        public void OnTriggerEnter(Collider other)
+        {
+            if (triggered)
+            {
+                return;
+            }
 
-		triggered = true;
-		stillTriggered = true;
-		++ActiveSpeakers;
+            var inventory = other.GetComponent<PlayerInventory>();
+            if (!inventory)
+            {
+                return;
+            }
 
-		StartCoroutine(SayStuff());
+            triggered = true;
+            stillTriggered = true;
+            ++ActiveSpeakers;
 
-		var bc = GetComponent<BoxCollider>();
-		if (bc) {
-			var size = bc.size;
-			size.x += extraLeaveRange * 2;
-			size.y += extraLeaveRange * 2;
-			size.z += extraLeaveRange * 2;
-			bc.size = size;
-		}
-	}
+            StartCoroutine(SayStuff());
 
-	private IEnumerator SayStuff() {
-		for (int idx = 0; idx < thingsToSay.Length && stillTriggered; ++idx) {
-			yield return new WaitForSeconds(thingsToSay[idx].delay);
-			if (!stillTriggered) break;
-			HUDManager.Instance.Say(thingsToSay[idx].textHTML, thingsToSay[idx].dwellTime);
-		}
-		--ActiveSpeakers;
-		Destroy(gameObject);
-	}
+            var bc = GetComponent<BoxCollider>();
+            if (bc)
+            {
+                var size = bc.size;
+                size.x += extraLeaveRange * 2;
+                size.y += extraLeaveRange * 2;
+                size.z += extraLeaveRange * 2;
+                bc.size = size;
+            }
+        }
 
-	public void OnTriggerExit(Collider other) {
-		var inventory = other.GetComponent<PlayerInventory>();
-		if (!inventory) return;
+        private IEnumerator SayStuff()
+        {
+            for (var idx = 0; idx < thingsToSay.Length && stillTriggered; ++idx)
+            {
+                yield return new WaitForSeconds(thingsToSay[idx].delay);
+                if (!stillTriggered)
+                {
+                    break;
+                }
 
-		stillTriggered = false;
-	}
+                HUDManager.Instance.Say(thingsToSay[idx].textHTML, thingsToSay[idx].dwellTime);
+            }
+            --ActiveSpeakers;
+            Destroy(gameObject);
+        }
+
+        public void OnTriggerExit(Collider other)
+        {
+            var inventory = other.GetComponent<PlayerInventory>();
+            if (!inventory)
+            {
+                return;
+            }
+
+            stillTriggered = false;
+        }
 
 
-}
+    }
 
 }

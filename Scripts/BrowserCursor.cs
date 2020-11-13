@@ -1,178 +1,201 @@
 using System;
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using UnityEngine;
 using CursorType = ZenFulcrum.EmbeddedBrowser.BrowserNative.CursorType;
 using Object = UnityEngine.Object;
 
-namespace ZenFulcrum.EmbeddedBrowser {
+namespace ZenFulcrum.EmbeddedBrowser
+{
 
-/**
- * Manages finding and copying cursors for you.
- * Each instance has one active cursor and a Texture2D you can read from to use it.
- */
-public class BrowserCursor {
-	public class CursorInfo {
-		public int atlasOffset;
-		public Vector2 hotspot;
-	}
+    /**
+     * Manages finding and copying cursors for you.
+     * Each instance has one active cursor and a Texture2D you can read from to use it.
+     */
+    public class BrowserCursor
+    {
+        public class CursorInfo
+        {
+            public int atlasOffset;
+            public Vector2 hotspot;
+        }
 
-	private static Dictionary<CursorType, CursorInfo> mapping = new Dictionary<CursorType, CursorInfo>();
+        private static readonly Dictionary<CursorType, CursorInfo> mapping = new Dictionary<CursorType, CursorInfo>();
 
-	private static bool loaded = false;
+        private static bool loaded = false;
 
-	private static int size;
-	private static Texture2D allCursors;
+        private static int size;
+        private static Texture2D allCursors;
 
-	/// <summary>
-	/// Fired when the mouse cursor's appearance or hotspot changes.
-	/// Also fired when the mouse enters/leaves the browser.
-	/// </summary>
-	public event Action cursorChange = () => {};
+        /// <summary>
+        /// Fired when the mouse cursor's appearance or hotspot changes.
+        /// Also fired when the mouse enters/leaves the browser.
+        /// </summary>
+        public event Action cursorChange = () => { };
 
-	private static void Load() {
-		if (loaded) return;
-		allCursors = Resources.Load<Texture2D>("Browser/Cursors");
-		if (!allCursors) throw new Exception("Failed to find browser allCursors");
+        private static void Load()
+        {
+            if (loaded)
+            {
+                return;
+            }
 
-		size = allCursors.height;
+            allCursors = Resources.Load<Texture2D>("Browser/Cursors");
+            if (!allCursors)
+            {
+                throw new Exception("Failed to find browser allCursors");
+            }
 
-		var listObj = Resources.Load<TextAsset>("Browser/Cursors");
+            size = allCursors.height;
 
-		foreach (var row in listObj.text.Split('\n')) {
-			var info = row.Split(',');
+            var listObj = Resources.Load<TextAsset>("Browser/Cursors");
 
-			var k = (CursorType)Enum.Parse(typeof(CursorType), info[0]);
-			var v = new CursorInfo() {
-				atlasOffset = int.Parse(info[1]),
-				hotspot = new Vector2(int.Parse(info[2]), int.Parse(info[3])),
-			};
-			mapping[k] = v;
-		}
+            foreach (var row in listObj.text.Split('\n'))
+            {
+                var info = row.Split(',');
 
-		loaded = true;
-	}
+                var k = (CursorType)Enum.Parse(typeof(CursorType), info[0]);
+                var v = new CursorInfo()
+                {
+                    atlasOffset = int.Parse(info[1]),
+                    hotspot = new Vector2(int.Parse(info[2]), int.Parse(info[3])),
+                };
+                mapping[k] = v;
+            }
 
-	/** 
-	 * Texture for the current cursor.
-	 * If the cursor should be hidden, this will be null.
-	 */
-	public virtual Texture2D Texture { get; protected set; }
+            loaded = true;
+        }
 
-	/** 
-	 * Hotspot for the current cursor. (0, 0) indicates the top-left of the texture is the hotspot. 
-	 * (1, 1) indicates the bottom-right.
-	 */
-	public virtual Vector2 Hotspot { get; protected set; }
+        /** 
+         * Texture for the current cursor.
+         * If the cursor should be hidden, this will be null.
+         */
+        public virtual Texture2D Texture { get; protected set; }
 
-	private bool _hasMouse;
-	/// <summary>
-	/// True when the mouse is over the browser, false otherwise.
-	/// </summary>
-	public bool HasMouse { 
-		get {
-			return _hasMouse;
-		}
-		set {
-			_hasMouse = value;
-			cursorChange();
-		}
-	}
+        /** 
+         * Hotspot for the current cursor. (0, 0) indicates the top-left of the texture is the hotspot. 
+         * (1, 1) indicates the bottom-right.
+         */
+        public virtual Vector2 Hotspot { get; protected set; }
 
-	protected Texture2D normalTexture;
-	protected Texture2D customTexture;
+        private bool _hasMouse;
+        /// <summary>
+        /// True when the mouse is over the browser, false otherwise.
+        /// </summary>
+        public bool HasMouse
+        {
+            get => _hasMouse;
+            set
+            {
+                _hasMouse = value;
+                cursorChange();
+            }
+        }
 
-	public BrowserCursor() {
-		Load();
+        protected Texture2D normalTexture;
+        protected Texture2D customTexture;
 
-		normalTexture = CreateTexture(size, size);
+        public BrowserCursor()
+        {
+            Load();
 
-		SetActiveCursor(BrowserNative.CursorType.Pointer);
-	}
+            normalTexture = CreateTexture(size, size);
 
-	private Texture2D CreateTexture(int w, int h) {
-		#if UNITY_2018_3_OR_NEWER
-			var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-		#else
+            SetActiveCursor(BrowserNative.CursorType.Pointer);
+        }
+
+        private Texture2D CreateTexture(int w, int h)
+        {
+#if UNITY_2018_3_OR_NEWER
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+#else
 			var tex = new Texture2D(w, h, TextureFormat.ARGB32, false);
-		#endif
+#endif
 
-		#if UNITY_EDITOR
-			tex.alphaIsTransparency = true;
-		#endif
+#if UNITY_EDITOR
+            tex.alphaIsTransparency = true;
+#endif
 
-		return tex;
-	}
+            return tex;
+        }
 
-	/// <summary>
-	/// Switches the active cursor type. After calling this you can access the cursor image through this.Texture.
-	/// </summary>
-	/// <param name="type"></param>
-	public virtual void SetActiveCursor(CursorType type) {
-		if (type == CursorType.Custom) throw new ArgumentException("Use SetCustomCursor to set custom cursors.", "type");
+        /// <summary>
+        /// Switches the active cursor type. After calling this you can access the cursor image through this.Texture.
+        /// </summary>
+        /// <param name="type"></param>
+        public virtual void SetActiveCursor(CursorType type)
+        {
+            if (type == CursorType.Custom)
+            {
+                throw new ArgumentException("Use SetCustomCursor to set custom cursors.", "type");
+            }
 
-		if (type == CursorType.None) {
-			Texture = null;
-			//Side note: if you copy down a bunch of transparent pixels and try to set the mouse cursor to that
-			//both OS X and Windows fail to do what you'd expect.
-			//Edit: OS X is now crashing for me if you try to do that.
-			cursorChange();
-			return;
-		}
+            if (type == CursorType.None)
+            {
+                Texture = null;
+                //Side note: if you copy down a bunch of transparent pixels and try to set the mouse cursor to that
+                //both OS X and Windows fail to do what you'd expect.
+                //Edit: OS X is now crashing for me if you try to do that.
+                cursorChange();
+                return;
+            }
 
-		var info = mapping[type];
-		var pixelData = allCursors.GetPixels(info.atlasOffset * size, 0, size, size);
+            var info = mapping[type];
+            var pixelData = allCursors.GetPixels(info.atlasOffset * size, 0, size, size);
 
-		Hotspot = info.hotspot;
+            Hotspot = info.hotspot;
 
-		normalTexture.SetPixels(pixelData);
+            normalTexture.SetPixels(pixelData);
 
-		normalTexture.Apply(true);
+            normalTexture.Apply(true);
 
-		Texture = normalTexture;
+            Texture = normalTexture;
 
-		cursorChange();
-	}
+            cursorChange();
+        }
 
-	/// <summary>
-	/// Sets a custom cursor. 
-	/// </summary>
-	/// <param name="cursor">ARGB texture to set</param>
-	/// <param name="hotspot"></param>
-	public virtual void SetCustomCursor(Texture2D cursor, Vector2 hotspot) {
-		var pixels = cursor.GetPixels32();
+        /// <summary>
+        /// Sets a custom cursor. 
+        /// </summary>
+        /// <param name="cursor">ARGB texture to set</param>
+        /// <param name="hotspot"></param>
+        public virtual void SetCustomCursor(Texture2D cursor, Vector2 hotspot)
+        {
+            var pixels = cursor.GetPixels32();
 
-		//First off, is it completely blank? 'Cuz if so that can cause OS X to crash.
-		var hasData = false;
-		for (int i = 0; i < pixels.Length; i++) {
-			if (pixels[i].a != 0) {
-				hasData = true;
-				break;
-			}
-		}
+            //First off, is it completely blank? 'Cuz if so that can cause OS X to crash.
+            var hasData = false;
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                if (pixels[i].a != 0)
+                {
+                    hasData = true;
+                    break;
+                }
+            }
 
-		if (!hasData) {
-			//it's blank, so handle it like a regular blank cursor
-			SetActiveCursor(CursorType.None);
-			return;
-		}
+            if (!hasData)
+            {
+                //it's blank, so handle it like a regular blank cursor
+                SetActiveCursor(CursorType.None);
+                return;
+            }
 
-		if (!customTexture || customTexture.width != cursor.width || customTexture.height != cursor.height) {
-			Object.Destroy(customTexture);
-			customTexture = CreateTexture(cursor.width, cursor.height);
-		}
+            if (!customTexture || customTexture.width != cursor.width || customTexture.height != cursor.height)
+            {
+                Object.Destroy(customTexture);
+                customTexture = CreateTexture(cursor.width, cursor.height);
+            }
 
-		customTexture.SetPixels32(pixels);
-		customTexture.Apply(true);
+            customTexture.SetPixels32(pixels);
+            customTexture.Apply(true);
 
-		this.Hotspot = hotspot;
+            Hotspot = hotspot;
 
-		Texture = customTexture;
-		cursorChange();
-	}
+            Texture = customTexture;
+            cursorChange();
+        }
 
 
-}
+    }
 
 }

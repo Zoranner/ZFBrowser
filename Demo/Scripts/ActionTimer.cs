@@ -3,38 +3,51 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace ZenFulcrum.EmbeddedBrowser {
+namespace ZenFulcrum.EmbeddedBrowser
+{
 
-/** When our trigger is touched by the player, does the actions in the list. (one-shot) */
-public class ActionTimer : MonoBehaviour {
+    /** When our trigger is touched by the player, does the actions in the list. (one-shot) */
+    public class ActionTimer : MonoBehaviour
+    {
 
-	[Serializable]
-	public class TimedAction {
-		/** How long since the action should we wait? */
-		public float delay;
-		/** What action should we take? */
-		public UnityEvent action;
-	}
+        [Serializable]
+        public class TimedAction
+        {
+            /** How long since the action should we wait? */
+            public float delay;
+            /** What action should we take? */
+            public UnityEvent action;
+        }
 
-	public TimedAction[] thingsToDo;
-	private bool triggered;
+        public TimedAction[] thingsToDo;
+        private bool triggered;
 
-	public void OnTriggerEnter(Collider other) {
-		if (triggered) return;
-		var inventory = other.GetComponent<PlayerInventory>();
-		if (!inventory) return;
+        public void OnTriggerEnter(Collider other)
+        {
+            if (triggered)
+            {
+                return;
+            }
 
-		triggered = true;
+            var inventory = other.GetComponent<PlayerInventory>();
+            if (!inventory)
+            {
+                return;
+            }
 
-		StartCoroutine(DoThings());
-	}
+            triggered = true;
 
-	private IEnumerator DoThings() {
-		for (int idx = 0; idx < thingsToDo.Length; ++idx) {
-			yield return new WaitForSeconds(thingsToDo[idx].delay);
-			thingsToDo[idx].action.Invoke();
-		}
-	}
-}
+            StartCoroutine(DoThings());
+        }
+
+        private IEnumerator DoThings()
+        {
+            for (var idx = 0; idx < thingsToDo.Length; ++idx)
+            {
+                yield return new WaitForSeconds(thingsToDo[idx].delay);
+                thingsToDo[idx].action.Invoke();
+            }
+        }
+    }
 
 }

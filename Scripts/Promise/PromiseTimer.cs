@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace ZenFulcrum.EmbeddedBrowser
 {
@@ -80,7 +78,7 @@ namespace ZenFulcrum.EmbeddedBrowser
         /// <summary>
         /// Currently pending promises
         /// </summary>
-        private List<PredicateWait> waiting = new List<PredicateWait>();
+        private readonly List<PredicateWait> waiting = new List<PredicateWait>();
 
         /// <summary>
         /// Resolve the returned promise once the time has elapsed
@@ -125,7 +123,7 @@ namespace ZenFulcrum.EmbeddedBrowser
         {
             curTime += deltaTime;
 
-            int i = 0;
+            var i = 0;
             while (i < waiting.Count)
             {
                 var wait = waiting[i];
